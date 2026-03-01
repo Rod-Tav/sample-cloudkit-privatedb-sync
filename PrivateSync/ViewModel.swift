@@ -17,7 +17,7 @@ final class ViewModel: ObservableObject {
     @Published private(set) var contactNames: [String] = []
 
     /// A dictionary mapping contact names (value) to ID (key).
-    @Published private var contacts: [String: String] = [:]
+    @Published private var data: [String: String] = [:]
 
     // MARK: CloudKit Properties
 
@@ -40,7 +40,7 @@ final class ViewModel: ObservableObject {
 
     init() {
         // For simplicity, observe the local cache and publish just the names (values) to the contactNames published var.
-        $contacts.map { $0.values.sorted() }
+        $data.map { $0.values.sorted() }
             .assign(to: &$contactNames)
     }
 
@@ -78,10 +78,10 @@ final class ViewModel: ObservableObject {
             await MainActor.run {
                 changedRecordIDsAndNames.forEach { id, name in
                     if let name = name {
-                        contacts[id] = name
+                        data[id] = name
                     }
                 }
-                deletedRecordIDs.forEach { contacts.removeValue(forKey: $0) }
+                deletedRecordIDs.forEach { data.removeValue(forKey: $0) }
             }
 
             /// Write updated local cache to disk.
@@ -112,7 +112,7 @@ final class ViewModel: ObservableObject {
         /// At this point, the record has been successfully saved and we can add it to our local cache.
         /// If the `save` operation fails, an error is thrown before reaching this point.
         await MainActor.run {
-            contacts[savedRecordName] = name
+            data[savedRecordName] = name
         }
         await saveLocalCache()
     }
@@ -124,7 +124,7 @@ final class ViewModel: ObservableObject {
     func deleteContact(name: String) async throws {
         // In this contrived example, Contact records only store a name, so rather than requiring the
         // unique ID to delete a Contact, we'll use the first ID that matches the name to delete.
-        guard let matchingID = contacts.first(where: { _, value in name == value })?.key else {
+        guard let matchingID = data.first(where: { _, value in name == value })?.key else {
             debugPrint("Contact not found on deletion for name: \(name)")
             throw PrivateSyncError.contactNotFound
         }
@@ -136,7 +136,7 @@ final class ViewModel: ObservableObject {
         /// At this point, the record has been successfully deleted.
         /// If the `deleteRecord` operation fails, an error is thrown before reaching this point.
         await MainActor.run {
-            _ = contacts.removeValue(forKey: matchingID)
+            _ = data.removeValue(forKey: matchingID)
         }
         
         await saveLocalCache()
@@ -146,13 +146,13 @@ final class ViewModel: ObservableObject {
 
     private func loadLocalCache() async {
         await MainActor.run {
-            contacts = UserDefaults.standard.dictionary(forKey: "contacts") as? [String: String] ?? [:]
+            data = UserDefaults.standard.dictionary(forKey: "contacts") as? [String: String] ?? [:]
         }
     }
 
     private func saveLocalCache() async {
         await MainActor.run {
-            UserDefaults.standard.set(contacts, forKey: "contacts")
+            UserDefaults.standard.set(data, forKey: "contacts")
         }
     }
 
