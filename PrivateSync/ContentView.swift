@@ -7,6 +7,7 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject var vm: ViewModel
+   
     @State var nameInput: String = ""
     @State var isAddingContact: Bool = false
 
@@ -79,6 +80,7 @@ struct ContentView: View {
         }.onDisappear { nameInput = "" }
     }
 
+    // can we simplify this in vm and use fatalerror to get around print
     private func fetchChanges() async {
         do {
             try await vm.fetchLatestChanges()

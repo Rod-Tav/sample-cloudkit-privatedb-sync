@@ -28,11 +28,11 @@ class PrivateSyncTests: XCTestCase {
 
     func test_CloudKitReadiness() async throws {
         // Fetch zones from the Private Database of the CKContainer for the current user to test for valid/ready state
-        let container = CKContainer(identifier: Config.containerIdentifier)
-        let database = container.privateCloudDatabase
+        let world = CKContainer(identifier: CKWorld.id)
+        let cloud = world.privateCloudDatabase
 
         do {
-            _ = try await database.allRecordZones()
+            _ = try await cloud.allRecordZones()
         } catch let error as CKError {
             switch error.code {
             case .badContainer, .badDatabase:

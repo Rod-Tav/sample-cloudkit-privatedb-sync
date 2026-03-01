@@ -22,9 +22,9 @@ final class ViewModel: ObservableObject {
     // MARK: CloudKit Properties
 
     /// The CloudKit container we'll use.
-    private lazy var container = CKContainer(identifier: Config.containerIdentifier)
+    private lazy var world = CKContainer(identifier: CKWorld.id)
     /// For this sample we use the iCloud user's private database.
-    private lazy var database = container.privateCloudDatabase
+    private lazy var cloud = world.privateCloudDatabase
     /// We use a custom record zone to support fetching only changed records.
     private let zone = CKRecordZone(zoneName: "Contacts")
     /// Each subscription requires a unique ID.
@@ -62,7 +62,7 @@ final class ViewModel: ObservableObject {
 
         while awaitingChanges {
             /// Fetch changeset for the last known change token.
-            let changes = try await database.recordZoneChanges(inZoneWith: zone.zoneID, since: lastChangeToken)
+            let changes = try await cloud.recordZoneChanges(inZoneWith: zone.zoneID, since: lastChangeToken)
 
             /// Convert changes to `CKRecord` objects and deleted IDs.
             let changedRecords = changes.modificationResultsByID.compactMapValues { try? $0.get().record }
@@ -106,7 +106,7 @@ final class ViewModel: ObservableObject {
         let newRecord = CKRecord(recordType: "Contact", recordID: newRecordID)
         newRecord["name"] = name
 
-        let savedRecord = try await database.save(newRecord)
+        let savedRecord = try await cloud.save(newRecord)
         let savedRecordName = savedRecord.recordID.recordName
 
         /// At this point, the record has been successfully saved and we can add it to our local cache.
@@ -131,7 +131,7 @@ final class ViewModel: ObservableObject {
 
         let recordID = CKRecord.ID(recordName: matchingID, zoneID: zone.zoneID)
 
-        try await database.deleteRecord(withID: recordID)
+        try await cloud.deleteRecord(withID: recordID)
 
         /// At this point, the record has been successfully deleted.
         /// If the `deleteRecord` operation fails, an error is thrown before reaching this point.
@@ -182,7 +182,7 @@ final class ViewModel: ObservableObject {
         }
 
         do {
-            _ = try await database.modifyRecordZones(saving: [zone], deleting: [])
+            _ = try await cloud.modifyRecordZones(saving: [zone], deleting: [])
         } catch {
             print("ERROR: Failed to create custom zone: \(error.localizedDescription)")
             throw error
@@ -199,7 +199,7 @@ final class ViewModel: ObservableObject {
 
         // First check if the subscription has already been created.
         // If a subscription is returned, we don't need to create one.
-        let foundSubscription = try? await database.subscription(for: subscriptionID)
+        let foundSubscription = try? await cloud.subscription(for: subscriptionID)
         guard foundSubscription == nil else {
             UserDefaults.standard.setValue(true, forKey: "isSubscribed")
             return
@@ -211,7 +211,7 @@ final class ViewModel: ObservableObject {
         notificationInfo.shouldSendContentAvailable = true
         subscription.notificationInfo = notificationInfo
 
-        _ = try await database.modifySubscriptions(saving: [subscription], deleting: [])
+        _ = try await cloud.modifySubscriptions(saving: [subscription], deleting: [])
         UserDefaults.standard.setValue(true, forKey: "isSubscribed")
     }
 
